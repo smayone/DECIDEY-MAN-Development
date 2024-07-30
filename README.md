@@ -5,13 +5,19 @@ DECIDEY's mission is to empower individuals through data control and charitable 
 
 **Our Mission:**
 
-* The DECIDEY-MAN project aims to revolutionize charitable giving and empower communities by leveraging blockchain technology and AI to ensure transparency, efficiency, and trust in the allocation and use of     resources. 
-* DECIDEY NGO is dedicated to fostering an advantageous environment for the development and growth of the SOLVY app, a groundbreaking platform designed to empower individuals in the digital economy. 
-* The MAN (Mandatory Audit Network) plays a crucial role by delivering a trusted environment with transparent audits and reports on the resources of both DECIDEY NGO and SOLVY.
+* The DECIDEY-MAN project is dedicated to empowering individuals through technology and community. By leveraging blockchain technology and AI, we aim to create a transparent and efficient ecosystem
+  that fosters economic growth and social impact.
+* DECIDEY, a decentralized charitable organization, supports the development of SOLVY, a groundbreaking web3 digital finance platform designed to empower individuals in the digital economy.
+* SOLVY provides users with control over their finances and enables them to participate in a cooperative ownership model.
+* The MAN (Mandatory Audit Network) ensures transparency and accountability by providing rigorous audits and reports on both DECIDEY and SOLVY.
 
-* **Our ultimate goal is to create a platform that amplifies the voices and values of Americans who feel unrepresented by traditional power structures, while building a more equitable and sustainable society       where every voice is heard and every contribution makes a difference.**
+* Together, DECIDEY, SOLVY, and MAN form a synergistic ecosystem that prioritizes user empowerment, financial inclusion, and social responsibility.
+* Our ultimate goal is to create a platform that amplifies the voices of Americans who feel unrepresented by traditional power structures, fostering a more equitable and sustainable society.
+
+* **Our ultimate goal is to create a platform that amplifies the voices and values of Americans who feel unrepresented by traditional power structures, while building a more equitable and sustainable society
+  where every voice is heard and every contribution makes a difference.**
   
-* **We believe that by fostering a truly free marketplace and empowering individuals with control over their financial lives, we can achieve greater economic justice and opportunity for all.**
+* **We believe that by fostering a truly free marketplace and empowering individuals with control over their financial lives, we can achieve greater economic justice, sustainability and opportunity for all.**
   
 **Core Technologies:**
 
