@@ -1,5 +1,7 @@
 # DECIDEY-MAN-Development
-This repository is for the development of DECIDEY (pronounced dee-say-day), an AI-powered blockchain-based charitable organization, and The MAN (Mandatory Audit Network), its transparent and accountable financial management system.
+This repository houses the development of DECIDEY (pronounced dee-see-day), a Decentralized Empowerment Control Identity Data Economy of Yours, an AI-powered blockchain-based charitable organization. 
+DECIDEY supports SOLVY (Solution Valued You), a web3 digital finance platform, and MAN (Mandatory Audit Network), its transparent financial management system. 
+DECIDEY's mission is to empower individuals through data control and charitable initiatives, including facilitating US tax repatriation for technology corporations.
 
 **Our Mission:**
 
