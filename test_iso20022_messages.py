@@ -118,7 +118,67 @@ direct_debit = """
 </Document>
 """
 
+# Test payment return
+payment_return = """
+<Document>
+  <PmtRtr>
+    <TxInf>
+      <RtrId>RTN123456</RtrId>
+      <OrgnlTxId>ORGTX789012</OrgnlTxId>
+      <RtrdIntrBkSttlmAmt Ccy="EUR">200.00</RtrdIntrBkSttlmAmt>
+      <RtrRsnInf>
+        <Rsn>
+          <Cd>AC04</Cd>
+        </Rsn>
+      </RtrRsnInf>
+    </TxInf>
+  </PmtRtr>
+</Document>
+"""
+
+# Test resolution of investigation
+resolution_of_investigation = """
+<Document>
+  <RsltnOfInvstgtn>
+    <CaseAssgnmt>
+      <Id>CASE2023001</Id>
+      <Cretr>
+        <Pty>
+          <Nm>Bank XYZ</Nm>
+        </Pty>
+      </Cretr>
+    </CaseAssgnmt>
+    <Sts>
+      <Conf>RSLV</Conf>
+    </Sts>
+  </RsltnOfInvstgtn>
+</Document>
+"""
+
+# Test bank to customer statement
+bank_to_customer_statement = """
+<Document>
+  <BkToCstmrStmt>
+    <Stmt>
+      <Id>STMT2023001</Id>
+      <CreDtTm>2023-09-20T10:00:00</CreDtTm>
+      <Acct>
+        <Id>
+          <IBAN>CH9300762011623852957</IBAN>
+        </Id>
+      </Acct>
+      <Bal>
+        <Amt Ccy="CHF">1000.00</Amt>
+      </Bal>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>
+"""
+
 if __name__ == "__main__":
     send_iso20022_message("Payment Status Report", payment_status_report)
     send_iso20022_message("Credit Transfer", credit_transfer)
     send_iso20022_message("Direct Debit", direct_debit)
+    send_iso20022_message("Payment Return", payment_return)
+    send_iso20022_message("Resolution of Investigation", resolution_of_investigation)
+    send_iso20022_message("Bank to Customer Statement", bank_to_customer_statement)

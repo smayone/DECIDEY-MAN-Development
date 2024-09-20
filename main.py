@@ -84,6 +84,14 @@ def transaction_details(id):
     transaction = Transaction.query.get_or_404(id)
     return render_template('transaction_details.html', transaction=transaction)
 
+@app.route('/check_test_user')
+def check_test_user():
+    user = User.query.filter_by(username='testuser').first()
+    if user:
+        return jsonify({'exists': True, 'id': user.id})
+    else:
+        return jsonify({'exists': False})
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()

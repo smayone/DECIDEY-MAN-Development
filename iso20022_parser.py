@@ -5,17 +5,30 @@ def parse_iso20022(xml_data: str) -> Dict[str, Any]:
     """
     Parse ISO20022 XML data and extract relevant information.
     """
-    parsed_data = xmltodict.parse(xml_data)
+    try:
+        parsed_data = xmltodict.parse(xml_data)
+    except Exception as e:
+        raise ValueError(f"Invalid XML data: {str(e)}")
     
     # Determine the message type
-    root_element = list(parsed_data['Document'].keys())[0]
+    document = parsed_data.get('Document', {})
+    if not document:
+        raise ValueError("Invalid ISO20022 message: Missing Document element")
     
-    if root_element == 'FIToFIPmtStsRpt':
-        return parse_payment_status_report(parsed_data['Document']['FIToFIPmtStsRpt'])
-    elif root_element == 'FIToFICstmrCdtTrf':
-        return parse_credit_transfer(parsed_data['Document']['FIToFICstmrCdtTrf'])
-    elif root_element == 'FIToFICstmrDrctDbt':
-        return parse_direct_debit(parsed_data['Document']['FIToFICstmrDrctDbt'])
+    root_element = list(document.keys())[0]
+    
+    parsers = {
+        'FIToFIPmtStsRpt': parse_payment_status_report,
+        'FIToFICstmrCdtTrf': parse_credit_transfer,
+        'FIToFICstmrDrctDbt': parse_direct_debit,
+        'PmtRtr': parse_payment_return,
+        'RsltnOfInvstgtn': parse_resolution_of_investigation,
+        'BkToCstmrStmt': parse_bank_to_customer_statement
+    }
+    
+    parser = parsers.get(root_element)
+    if parser:
+        return parser(document[root_element])
     else:
         raise ValueError(f"Unsupported message type: {root_element}")
 
@@ -60,4 +73,35 @@ def parse_direct_debit(data: Dict[str, Any]) -> Dict[str, Any]:
         'creditor_name': direct_debit_info['Cdtr']['Nm'],
         'creditor_account': direct_debit_info['CdtrAcct']['Id']['IBAN'],
         'mandate_id': direct_debit_info['DrctDbtTx']['MndtRltdInf']['MndtId'],
+    }
+
+def parse_payment_return(data: Dict[str, Any]) -> Dict[str, Any]:
+    return_info = data['TxInf']
+    return {
+        'message_type': 'payment_return',
+        'transaction_id': return_info['RtrId'],
+        'original_transaction_id': return_info['OrgnlTxId'],
+        'amount': return_info['RtrdIntrBkSttlmAmt']['#text'],
+        'currency': return_info['RtrdIntrBkSttlmAmt']['@Ccy'],
+        'return_reason': return_info['RtrRsnInf']['Rsn']['Cd'],
+    }
+
+def parse_resolution_of_investigation(data: Dict[str, Any]) -> Dict[str, Any]:
+    case_info = data['CaseAssgnmt']
+    return {
+        'message_type': 'resolution_of_investigation',
+        'case_id': case_info['Id'],
+        'creator': case_info['Cretr']['Pty']['Nm'],
+        'status': data['Sts']['Conf'],
+    }
+
+def parse_bank_to_customer_statement(data: Dict[str, Any]) -> Dict[str, Any]:
+    statement = data['Stmt']
+    return {
+        'message_type': 'bank_to_customer_statement',
+        'account_id': statement['Acct']['Id']['IBAN'],
+        'statement_id': statement['Id'],
+        'creation_date_time': statement['CreDtTm'],
+        'balance': statement['Bal'][0]['Amt']['#text'],
+        'currency': statement['Bal'][0]['Amt']['@Ccy'],
     }
