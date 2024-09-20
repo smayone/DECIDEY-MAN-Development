@@ -6,11 +6,13 @@ from iso20022_parser import parse_iso20022
 from ethereum_integration import translate_to_ethereum, store_on_blockchain
 from config import Config
 import os
+from flask_migrate import Migrate
 
 app = Flask(__name__)
 app.config.from_object(Config)
 
 db.init_app(app)
+migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
@@ -92,7 +94,20 @@ def check_test_user():
     else:
         return jsonify({'exists': False})
 
+def create_test_user():
+    with app.app_context():
+        test_user = User.query.filter_by(username='testuser').first()
+        if not test_user:
+            new_user = User(username='testuser')
+            new_user.set_password('testpassword123')
+            db.session.add(new_user)
+            db.session.commit()
+            print("Test user created successfully.")
+        else:
+            print("Test user already exists.")
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+    create_test_user()
     app.run(host='0.0.0.0', port=5000)
