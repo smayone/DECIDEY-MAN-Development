@@ -48,13 +48,29 @@ def receive_transaction():
     if not iso20022_data:
         return jsonify({'error': 'No ISO20022 data provided'}), 400
 
-    parsed_data = parse_iso20022(iso20022_data)
+    try:
+        parsed_data = parse_iso20022(iso20022_data)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
     ethereum_data = translate_to_ethereum(parsed_data)
     transaction_hash = store_on_blockchain(ethereum_data)
 
     new_transaction = Transaction(
+        message_type=parsed_data['message_type'],
+        transaction_id=parsed_data['transaction_id'],
+        status=parsed_data.get('status'),
+        reason=parsed_data.get('reason'),
+        amount=parsed_data['amount'],
+        currency=parsed_data['currency'],
+        debtor_name=parsed_data['debtor_name'],
+        debtor_account=parsed_data['debtor_account'],
+        creditor_name=parsed_data['creditor_name'],
+        creditor_account=parsed_data['creditor_account'],
+        remittance_info=parsed_data.get('remittance_info'),
+        mandate_id=parsed_data.get('mandate_id'),
         iso20022_data=iso20022_data,
-        ethereum_data=ethereum_data,
+        ethereum_data=str(ethereum_data),
         transaction_hash=transaction_hash
     )
     db.session.add(new_transaction)
