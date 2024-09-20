@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<h2>Transaction Dashboard</h2>
+<table id="transactionTable">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Transaction Hash</th>
+            <th>Timestamp</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for transaction in transactions %}
+        <tr>
+            <td>{{ transaction.id }}</td>
+            <td>{{ transaction.transaction_hash }}</td>
+            <td>{{ transaction.timestamp }}</td>
+            <td><a href="{{ url_for('transaction_details', id=transaction.id) }}">View Details</a></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

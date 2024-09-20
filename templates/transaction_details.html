@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Transaction Details{% endblock %}
+
+{% block content %}
+<h2>Transaction Details</h2>
+<div>
+    <h3>ISO20022 Data</h3>
+    <pre>{{ transaction.iso20022_data }}</pre>
+</div>
+<div>
+    <h3>Ethereum Data</h3>
+    <pre>{{ transaction.ethereum_data }}</pre>
+</div>
+<div>
+    <h3>Transaction Hash</h3>
+    <p>{{ transaction.transaction_hash }}</p>
+</div>
+<div>
+    <h3>Timestamp</h3>
+    <p>{{ transaction.timestamp }}</p>
+</div>
+<a href="{{ url_for('dashboard') }}">Back to Dashboard</a>
+{% endblock %}
