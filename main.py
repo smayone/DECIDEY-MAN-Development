@@ -4,6 +4,7 @@ from werkzeug.security import check_password_hash
 from models import db, User, Transaction
 from iso20022_parser import parse_iso20022
 from ethereum_integration import translate_to_ethereum, store_on_blockchain
+from bank_api_integration import get_bank_api, get_ach_system
 from config import Config
 import os
 from flask_migrate import Migrate
@@ -47,6 +48,9 @@ def logout():
 @app.route('/api/transaction', methods=['POST'])
 def receive_transaction():
     iso20022_data = request.json.get('iso20022_data')
+    bank_name = request.json.get('bank_name', 'example_bank')
+    ach_name = request.json.get('ach_name', 'example_ach')
+
     if not iso20022_data:
         return jsonify({'error': 'No ISO20022 data provided'}), 400
 
@@ -57,6 +61,21 @@ def receive_transaction():
 
     ethereum_data = translate_to_ethereum(parsed_data)
     transaction_hash = store_on_blockchain(ethereum_data)
+
+    try:
+        bank_api = get_bank_api(bank_name)
+        bank_response = bank_api.send_transaction(parsed_data)
+    except ValueError as e:
+        return jsonify({'error': str(e)}), 400
+
+    if parsed_data['message_type'] in ['credit_transfer', 'direct_debit']:
+        try:
+            ach_system = get_ach_system(ach_name)
+            ach_response = ach_system.process_ach_transaction(parsed_data)
+        except ValueError as e:
+            return jsonify({'error': str(e)}), 400
+    else:
+        ach_response = None
 
     new_transaction = Transaction(
         message_type=parsed_data['message_type'],
@@ -85,12 +104,19 @@ def receive_transaction():
         account_id=parsed_data.get('account_id'),
         statement_id=parsed_data.get('statement_id'),
         creation_date_time=parsed_data.get('creation_date_time'),
-        balance=parsed_data.get('balance')
+        balance=parsed_data.get('balance'),
+        bank_response=str(bank_response),
+        ach_response=str(ach_response) if ach_response else None
     )
     db.session.add(new_transaction)
     db.session.commit()
 
-    return jsonify({'success': True, 'transaction_hash': transaction_hash}), 201
+    return jsonify({
+        'success': True,
+        'transaction_hash': transaction_hash,
+        'bank_response': bank_response,
+        'ach_response': ach_response
+    }), 201
 
 @app.route('/transaction/<int:id>')
 @login_required
@@ -112,9 +138,13 @@ def create_test_user():
         if not test_user:
             new_user = User(username='testuser')
             new_user.set_password('testpassword123')
-            db.session.add(new_user)
-            db.session.commit()
-            print("Test user created successfully.")
+            try:
+                db.session.add(new_user)
+                db.session.commit()
+                print("Test user created successfully.")
+            except Exception as e:
+                db.session.rollback()
+                print(f"Error creating test user: {str(e)}")
         else:
             print("Test user already exists.")
 

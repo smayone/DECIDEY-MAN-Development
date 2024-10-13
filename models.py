@@ -44,3 +44,7 @@ class Transaction(db.Model):
     statement_id = db.Column(db.String(128))
     creation_date_time = db.Column(db.DateTime)
     balance = db.Column(db.Numeric(10, 2))
+
+    # New fields for bank and ACH responses
+    bank_response = db.Column(db.Text)
+    ach_response = db.Column(db.Text)

@@ -31,6 +31,10 @@ args = "Set Flask App"
 task = "workflow.run"
 args = "Initialize Flask-Migrate"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Run Test Script"
+
 [[workflows.workflow]]
 name = "Run Flask App"
 author = "agent"
@@ -52,7 +56,7 @@ agentRequireRestartOnSave = false
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "flask db migrate -m 'Add new fields for full ISO20022 support'"
+args = "export FLASK_APP=main.py && flask db migrate -m 'Add bank and ACH response fields'"
 
 [[workflows.workflow]]
 name = "Apply Migration"
@@ -63,7 +67,7 @@ agentRequireRestartOnSave = false
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "flask db upgrade"
+args = "export FLASK_APP=main.py && flask db upgrade"
 
 [[workflows.workflow]]
 name = "Set Flask App"
@@ -74,7 +78,7 @@ agentRequireRestartOnSave = false
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "export FLASK_APP=main.py"
+args = "export FLASK_APP=main.py && echo $FLASK_APP"
 
 [[workflows.workflow]]
 name = "Initialize Flask-Migrate"
@@ -86,6 +90,17 @@ agentRequireRestartOnSave = false
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "export FLASK_APP=main.py && flask db init && flask db migrate -m 'Initial migration' && flask db upgrade"
+
+[[workflows.workflow]]
+name = "Run Test Script"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python test_multiple_apis.py"
 
 [deployment]
 run = ["sh", "-c", "python main.py"]
