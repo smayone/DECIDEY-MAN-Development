@@ -1,5 +1,9 @@
 import requests
 import json
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 BASE_URL = "http://localhost:5000"
 
@@ -11,10 +15,16 @@ def test_transaction(iso20022_data, bank_name, ach_name):
         "ach_name": ach_name
     })
     headers = {"Content-Type": "application/json"}
-    response = requests.post(url, headers=headers, data=payload)
-    print(f"Response for {bank_name} and {ach_name}:")
-    print(json.dumps(response.json(), indent=2))
-    print("---")
+    try:
+        response = requests.post(url, headers=headers, data=payload)
+        response.raise_for_status()
+        logger.info(f"Response for {bank_name} and {ach_name}:")
+        logger.info(json.dumps(response.json(), indent=2))
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Error sending request: {str(e)}")
+    except json.JSONDecodeError as e:
+        logger.error(f"Error decoding JSON response: {str(e)}")
+    logger.info("---")
 
 # Test data
 iso20022_data = """
@@ -62,8 +72,15 @@ if __name__ == "__main__":
     # Test with mock bank and ACH
     test_transaction(iso20022_data, "mock_bank", "mock_ach")
     
-    # Test with example bank and ACH (these may fail due to connection issues)
+    # Test with example bank and ACH
     test_transaction(iso20022_data, "example_bank", "example_ach")
     
-    # Test with another bank and ACH (these may fail due to connection issues)
+    # Test with another bank and ACH
     test_transaction(iso20022_data, "another_bank", "another_ach")
+    
+    # Test with invalid bank name to check error handling
+    test_transaction(iso20022_data, "invalid_bank", "mock_ach")
+    
+    # Test with invalid ISO20022 data to check error handling
+    invalid_iso20022_data = "<InvalidDocument></InvalidDocument>"
+    test_transaction(invalid_iso20022_data, "mock_bank", "mock_ach")

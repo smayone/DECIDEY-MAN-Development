@@ -9,6 +9,8 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
+    custom_icon = db.Column(db.String(256))
+    icon_position = db.Column(db.String(5), default='left')
     debit_cards = db.relationship('DebitCard', backref='user', lazy='dynamic')
     bank_accounts = db.relationship('BankAccount', backref='user', lazy='dynamic')
 
