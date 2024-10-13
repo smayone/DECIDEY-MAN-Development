@@ -10,7 +10,6 @@ def parse_iso20022(xml_data: str) -> Dict[str, Any]:
     except Exception as e:
         raise ValueError(f"Invalid XML data: {str(e)}")
     
-    # Determine the message type
     document = parsed_data.get('Document', {})
     if not document:
         raise ValueError("Invalid ISO20022 message: Missing Document element")
@@ -23,7 +22,10 @@ def parse_iso20022(xml_data: str) -> Dict[str, Any]:
         'FIToFICstmrDrctDbt': parse_direct_debit,
         'PmtRtr': parse_payment_return,
         'RsltnOfInvstgtn': parse_resolution_of_investigation,
-        'BkToCstmrStmt': parse_bank_to_customer_statement
+        'BkToCstmrStmt': parse_bank_to_customer_statement,
+        'CstmrCdtTrfInitn': parse_customer_credit_transfer_initiation,
+        'CstmrDrctDbtInitn': parse_customer_direct_debit_initiation,
+        'CstmrPmtStsRpt': parse_customer_payment_status_report
     }
     
     parser = parsers.get(root_element)
@@ -104,4 +106,48 @@ def parse_bank_to_customer_statement(data: Dict[str, Any]) -> Dict[str, Any]:
         'creation_date_time': statement['CreDtTm'],
         'balance': statement['Bal'][0]['Amt']['#text'],
         'currency': statement['Bal'][0]['Amt']['@Ccy'],
+    }
+
+def parse_customer_credit_transfer_initiation(data: Dict[str, Any]) -> Dict[str, Any]:
+    payment_info = data['PmtInf']
+    credit_transfer_info = payment_info['CdtTrfTxInf']
+    return {
+        'message_type': 'customer_credit_transfer_initiation',
+        'transaction_id': credit_transfer_info['PmtId']['EndToEndId'],
+        'amount': credit_transfer_info['Amt']['InstdAmt']['#text'],
+        'currency': credit_transfer_info['Amt']['InstdAmt']['@Ccy'],
+        'debtor_name': payment_info['Dbtr']['Nm'],
+        'debtor_account': payment_info['DbtrAcct']['Id']['IBAN'],
+        'creditor_name': credit_transfer_info['Cdtr']['Nm'],
+        'creditor_account': credit_transfer_info['CdtrAcct']['Id']['IBAN'],
+        'requested_execution_date': payment_info['ReqdExctnDt'],
+    }
+
+def parse_customer_direct_debit_initiation(data: Dict[str, Any]) -> Dict[str, Any]:
+    payment_info = data['PmtInf']
+    direct_debit_info = payment_info['DrctDbtTxInf']
+    return {
+        'message_type': 'customer_direct_debit_initiation',
+        'transaction_id': direct_debit_info['PmtId']['EndToEndId'],
+        'amount': direct_debit_info['InstdAmt']['#text'],
+        'currency': direct_debit_info['InstdAmt']['@Ccy'],
+        'debtor_name': direct_debit_info['Dbtr']['Nm'],
+        'debtor_account': direct_debit_info['DbtrAcct']['Id']['IBAN'],
+        'creditor_name': payment_info['Cdtr']['Nm'],
+        'creditor_account': payment_info['CdtrAcct']['Id']['IBAN'],
+        'mandate_id': direct_debit_info['DrctDbtTx']['MndtRltdInf']['MndtId'],
+        'requested_collection_date': payment_info['ReqdColltnDt'],
+    }
+
+def parse_customer_payment_status_report(data: Dict[str, Any]) -> Dict[str, Any]:
+    original_group_info = data['OrgnlGrpInfAndSts']
+    transaction_info = data['OrgnlPmtInfAndSts']['TxInfAndSts']
+    return {
+        'message_type': 'customer_payment_status_report',
+        'original_message_id': original_group_info['OrgnlMsgId'],
+        'original_message_type': original_group_info['OrgnlMsgNmId'],
+        'group_status': original_group_info.get('GrpSts'),
+        'transaction_id': transaction_info['OrgnlTxId'],
+        'transaction_status': transaction_info['TxSts'],
+        'status_reason': transaction_info.get('StsRsnInf', {}).get('Rsn', {}).get('Cd'),
     }

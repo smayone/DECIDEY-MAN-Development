@@ -7,7 +7,7 @@ db = SQLAlchemy()
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)  # Increased length to 256
+    password_hash = db.Column(db.String(256), nullable=False)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -30,3 +30,17 @@ class Transaction(db.Model):
     ethereum_data = db.Column(db.Text, nullable=False)
     transaction_hash = db.Column(db.String(66), nullable=False)
     timestamp = db.Column(db.DateTime, server_default=db.func.now())
+    
+    # New fields for additional message types
+    original_message_id = db.Column(db.String(128))
+    original_message_type = db.Column(db.String(64))
+    group_status = db.Column(db.String(64))
+    requested_execution_date = db.Column(db.Date)
+    requested_collection_date = db.Column(db.Date)
+    return_reason = db.Column(db.String(64))
+    case_id = db.Column(db.String(128))
+    creator = db.Column(db.String(128))
+    account_id = db.Column(db.String(34))
+    statement_id = db.Column(db.String(128))
+    creation_date_time = db.Column(db.DateTime)
+    balance = db.Column(db.Numeric(10, 2))
