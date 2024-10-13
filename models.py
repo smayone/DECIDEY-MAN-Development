@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash
+from datetime import datetime
 
 db = SQLAlchemy()
 
@@ -8,6 +9,8 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
+    debit_cards = db.relationship('DebitCard', backref='user', lazy='dynamic')
+    bank_accounts = db.relationship('BankAccount', backref='user', lazy='dynamic')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -31,7 +34,6 @@ class Transaction(db.Model):
     transaction_hash = db.Column(db.String(66), nullable=False)
     timestamp = db.Column(db.DateTime, server_default=db.func.now())
     
-    # New fields for additional message types
     original_message_id = db.Column(db.String(128))
     original_message_type = db.Column(db.String(64))
     group_status = db.Column(db.String(64))
@@ -45,6 +47,27 @@ class Transaction(db.Model):
     creation_date_time = db.Column(db.DateTime)
     balance = db.Column(db.Numeric(10, 2))
 
-    # New fields for bank and ACH responses
     bank_response = db.Column(db.Text)
     ach_response = db.Column(db.Text)
+
+class DebitCard(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    card_number = db.Column(db.String(16), nullable=False)
+    expiration_date = db.Column(db.Date, nullable=False)
+    cvv = db.Column(db.String(3), nullable=False)
+    cardholder_name = db.Column(db.String(128), nullable=False)
+    billing_address = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_used = db.Column(db.DateTime)
+    is_active = db.Column(db.Boolean, default=True)
+
+class BankAccount(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    account_number = db.Column(db.String(34), nullable=False)
+    routing_number = db.Column(db.String(9), nullable=False)
+    account_type = db.Column(db.String(20), nullable=False)
+    bank_name = db.Column(db.String(128), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_active = db.Column(db.Boolean, default=True)

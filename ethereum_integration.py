@@ -8,12 +8,12 @@ def translate_to_ethereum(parsed_data):
     Translate parsed ISO20022 data to Ethereum-compatible format.
     """
     return {
-        'transaction_id': w3.keccak(text=parsed_data['transaction_id']).hex(),
-        'amount': w3.to_wei(parsed_data['amount'], 'ether'),
-        'currency': w3.keccak(text=parsed_data['currency']).hex(),
-        'debtor': w3.keccak(text=parsed_data['debtor']).hex(),
-        'creditor': w3.keccak(text=parsed_data['creditor']).hex(),
-        'status': w3.keccak(text=parsed_data['status']).hex(),
+        'transaction_id': w3.keccak(text=parsed_data.get('transaction_id', '')).hex(),
+        'amount': w3.to_wei(parsed_data.get('amount', 0), 'ether'),
+        'currency': w3.keccak(text=parsed_data.get('currency', '')).hex(),
+        'debtor': w3.keccak(text=parsed_data.get('debtor_name', '')).hex(),
+        'creditor': w3.keccak(text=parsed_data.get('creditor_name', '')).hex(),
+        'status': w3.keccak(text=parsed_data.get('status', '')).hex(),
     }
 
 def store_on_blockchain(ethereum_data):

@@ -56,7 +56,7 @@ agentRequireRestartOnSave = false
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "export FLASK_APP=main.py && flask db migrate -m 'Add bank and ACH response fields'"
+args = "export FLASK_APP=main.py && flask db migrate -m 'Add DebitCard model'"
 
 [[workflows.workflow]]
 name = "Apply Migration"

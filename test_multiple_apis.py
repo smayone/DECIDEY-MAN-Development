@@ -59,8 +59,11 @@ iso20022_data = """
 """
 
 if __name__ == "__main__":
-    # Test with example bank and ACH
+    # Test with mock bank and ACH
+    test_transaction(iso20022_data, "mock_bank", "mock_ach")
+    
+    # Test with example bank and ACH (these may fail due to connection issues)
     test_transaction(iso20022_data, "example_bank", "example_ach")
     
-    # Test with another bank and ACH
+    # Test with another bank and ACH (these may fail due to connection issues)
     test_transaction(iso20022_data, "another_bank", "another_ach")
