@@ -25,12 +25,19 @@
     <button type="submit">Update Position</button>
 </form>
 
+<h3>Real-time Transaction Updates</h3>
+<div id="real-time-updates"></div>
+
+<h3>Recent Transactions</h3>
 <table id="transactionTable">
     <thead>
         <tr>
             <th>ID</th>
             <th>Transaction Hash</th>
             <th>Timestamp</th>
+            <th>Amount</th>
+            <th>Currency</th>
+            <th>Status</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -40,10 +47,75 @@
             <td>{{ transaction.id }}</td>
             <td>{{ transaction.transaction_hash }}</td>
             <td>{{ transaction.timestamp }}</td>
+            <td>{{ transaction.amount }}</td>
+            <td>{{ transaction.currency }}</td>
+            <td>{{ transaction.status }}</td>
             <td><a href="{{ url_for('transaction_details', id=transaction.id) }}">View Details</a></td>
         </tr>
         {% endfor %}
     </tbody>
 </table>
-<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+
+<h3>Set Alert Thresholds</h3>
+<form id="alertForm">
+    <label for="amount_threshold">Amount Threshold:</label>
+    <input type="number" id="amount_threshold" name="amount_threshold" required>
+    <label for="currency">Currency:</label>
+    <input type="text" id="currency" name="currency" required>
+    <button type="submit">Set Alert</button>
+</form>
+
+<script>
+    const evtSource = new EventSource("{{ url_for('stream') }}");
+    const updates = document.getElementById('real-time-updates');
+    const alertForm = document.getElementById('alertForm');
+    let alertThreshold = 0;
+    let alertCurrency = '';
+
+    evtSource.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        const newRow = document.createElement('div');
+        newRow.innerHTML = `New transaction: ID ${data.id}, Hash: ${data.transaction_hash}, Amount: ${data.amount} ${data.currency}, Status: ${data.status}`;
+        updates.prepend(newRow);
+
+        // Check if the transaction amount exceeds the alert threshold
+        if (parseFloat(data.amount) > alertThreshold && data.currency === alertCurrency) {
+            alert(`Alert: New transaction exceeds threshold! Amount: ${data.amount} ${data.currency}`);
+        }
+
+        // Add the new transaction to the table
+        const table = document.getElementById('transactionTable').getElementsByTagName('tbody')[0];
+        const row = table.insertRow(0);
+        row.innerHTML = `
+            <td>${data.id}</td>
+            <td>${data.transaction_hash}</td>
+            <td>${data.timestamp}</td>
+            <td>${data.amount}</td>
+            <td>${data.currency}</td>
+            <td>${data.status}</td>
+            <td><a href="/transaction/${data.id}">View Details</a></td>
+        `;
+    };
+
+    alertForm.onsubmit = function(e) {
+        e.preventDefault();
+        alertThreshold = parseFloat(document.getElementById('amount_threshold').value);
+        alertCurrency = document.getElementById('currency').value;
+        
+        fetch("{{ url_for('set_alerts') }}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({amount_threshold: alertThreshold, currency: alertCurrency}),
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(`Alert set for transactions over ${alertThreshold} ${alertCurrency}`);
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+    };
+</script>
 {% endblock %}
