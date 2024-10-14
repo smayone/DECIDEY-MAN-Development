@@ -1,10 +1,44 @@
-# Add these imports at the top of the file
-from flask import Response, stream_with_context
+from flask import Flask, Response, stream_with_context, request, jsonify, render_template, redirect, url_for
+from flask_login import LoginManager, login_required, current_user, login_user, logout_user
+from werkzeug.security import check_password_hash
+from models import db, Transaction, User
+from datetime import datetime, timedelta
 import json
 import time
+import os
 
-# Add this new route after the existing routes
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key')  # Replace with a real secret key
+
+db.init_app(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        user = User.query.filter_by(username=username).first()
+        if user and check_password_hash(user.password_hash, password):
+            login_user(user)
+            return redirect(url_for('dashboard'))
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
 @app.route('/stream')
+@login_required
 def stream():
     def event_stream():
         while True:
@@ -25,14 +59,12 @@ def stream():
 
     return Response(stream_with_context(event_stream()), content_type='text/event-stream')
 
-# Update the dashboard route to include SSE
 @app.route('/')
 @login_required
 def dashboard():
     transactions = Transaction.query.order_by(Transaction.timestamp.desc()).limit(10).all()
-    return render_template('dashboard.html', transactions=transactions, custom_icon=current_user.custom_icon)
+    return render_template('dashboard.html', transactions=transactions)
 
-# Add this new route for alerts
 @app.route('/api/alerts', methods=['POST'])
 @login_required
 def set_alerts():
@@ -41,7 +73,13 @@ def set_alerts():
     # For simplicity, we'll just return the received data
     return jsonify(data), 200
 
+@app.route('/transaction/<int:id>')
+@login_required
+def transaction_details(id):
+    transaction = Transaction.query.get_or_404(id)
+    return render_template('transaction_details.html', transaction=transaction)
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(host='0.0.0.0', port=5000, threaded=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

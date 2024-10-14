@@ -5,26 +5,6 @@
 {% block content %}
 <h2>Transaction Dashboard</h2>
 
-<div class="custom-icon-container {{ current_user.icon_position }}">
-    {% if current_user.custom_icon %}
-    <img src="{{ url_for('static', filename=current_user.custom_icon) }}" alt="Custom Icon" class="custom-icon">
-    <form method="POST" action="{{ url_for('remove_icon') }}">
-        <button type="submit">Remove Custom Icon</button>
-    </form>
-    {% else %}
-    <a href="{{ url_for('upload_icon') }}">Upload Custom Icon</a>
-    {% endif %}
-</div>
-
-<form method="POST" action="{{ url_for('update_icon_position') }}">
-    <label for="icon_position">Icon Position:</label>
-    <select name="icon_position" id="icon_position">
-        <option value="left" {% if current_user.icon_position == 'left' %}selected{% endif %}>Left</option>
-        <option value="right" {% if current_user.icon_position == 'right' %}selected{% endif %}>Right</option>
-    </select>
-    <button type="submit">Update Position</button>
-</form>
-
 <h3>Real-time Transaction Updates</h3>
 <div id="real-time-updates"></div>
 
