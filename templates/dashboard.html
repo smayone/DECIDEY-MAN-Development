@@ -12,6 +12,9 @@
             <tr>
                 <th>Date</th>
                 <th>Amount</th>
+                <th>Source Currency</th>
+                <th>Target Currency</th>
+                <th>Exchange Rate</th>
                 <th>Status</th>
                 <th>Actions</th>
             </tr>
@@ -20,7 +23,10 @@
             {% for transaction in transactions %}
             <tr>
                 <td>{{ transaction.timestamp.strftime('%Y-%m-%d %H:%M') }}</td>
-                <td>{{ transaction.amount }} {{ transaction.currency }}</td>
+                <td>{{ transaction.amount }}</td>
+                <td>{{ transaction.source_currency }}</td>
+                <td>{{ transaction.target_currency }}</td>
+                <td>{{ transaction.exchange_rate }}</td>
                 <td>{{ transaction.status }}</td>
                 <td><a href="{{ url_for('transaction_details', id=transaction.id) }}" class="btn">View</a></td>
             </tr>
@@ -61,13 +67,16 @@
 
     socket.on('transaction_update', (data) => {
         const newUpdate = document.createElement('div');
-        newUpdate.textContent = `New transaction: ${data.amount} ${data.currency} - ${data.status}`;
+        newUpdate.textContent = `New transaction: ${data.amount} ${data.source_currency} to ${data.target_currency} - ${data.status}`;
         updates.insertBefore(newUpdate, updates.firstChild);
 
         const newRow = transactionTable.insertRow(0);
         newRow.innerHTML = `
             <td>${new Date(data.timestamp).toLocaleString()}</td>
-            <td>${data.amount} ${data.currency}</td>
+            <td>${data.amount}</td>
+            <td>${data.source_currency}</td>
+            <td>${data.target_currency}</td>
+            <td>${data.exchange_rate}</td>
             <td>${data.status}</td>
             <td><a href="/transaction/${data.id}" class="btn">View</a></td>
         `;

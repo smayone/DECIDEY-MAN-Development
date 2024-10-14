@@ -6,6 +6,7 @@ from models import db, User, Alert, Transaction
 from werkzeug.security import check_password_hash
 from decimal import Decimal, InvalidOperation
 import logging
+import requests
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://{}:{}@{}:{}/{}'.format(
@@ -86,6 +87,14 @@ def set_alert():
         db.session.rollback()
         return jsonify({'status': 'error', 'message': 'An error occurred while setting the alert'}), 500
 
+def get_exchange_rate(source_currency, target_currency):
+    url = f"https://api.exchangerate-api.com/v4/latest/{source_currency}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        return data['rates'].get(target_currency)
+    return None
+
 @app.route('/api/transaction', methods=['POST'])
 @login_required
 def process_transaction():
@@ -98,13 +107,14 @@ def process_transaction():
             return jsonify({'status': 'error', 'message': 'No data received'}), 400
         
         amount = data.get('amount')
-        currency = data.get('currency')
+        source_currency = data.get('source_currency')
+        target_currency = data.get('target_currency')
         status = data.get('status')
         debtor_name = data.get('debtor_name')
         creditor_name = data.get('creditor_name')
         transaction_type = data.get('transaction_type')
         
-        if not all([amount, currency, status, debtor_name, creditor_name, transaction_type]):
+        if not all([amount, source_currency, target_currency, status, debtor_name, creditor_name, transaction_type]):
             logger.error("Missing required transaction fields")
             return jsonify({'status': 'error', 'message': 'Missing required transaction fields'}), 400
         
@@ -114,10 +124,17 @@ def process_transaction():
             logger.error(f"Invalid amount: {amount}")
             return jsonify({'status': 'error', 'message': 'Invalid amount'}), 400
 
+        exchange_rate = get_exchange_rate(source_currency, target_currency)
+        if not exchange_rate:
+            logger.error(f"Failed to get exchange rate for {source_currency} to {target_currency}")
+            return jsonify({'status': 'error', 'message': 'Failed to get exchange rate'}), 500
+
         new_transaction = Transaction(
             user_id=current_user.id,
-            amount=amount,
-            currency=currency,
+            amount=float(amount),
+            source_currency=source_currency,
+            target_currency=target_currency,
+            exchange_rate=exchange_rate,
             status=status,
             debtor_name=debtor_name,
             creditor_name=creditor_name,
@@ -130,7 +147,9 @@ def process_transaction():
         socketio.emit('transaction_update', {
             'id': new_transaction.id,
             'amount': str(new_transaction.amount),
-            'currency': new_transaction.currency,
+            'source_currency': new_transaction.source_currency,
+            'target_currency': new_transaction.target_currency,
+            'exchange_rate': new_transaction.exchange_rate,
             'status': new_transaction.status,
             'debtor_name': new_transaction.debtor_name,
             'creditor_name': new_transaction.creditor_name,
@@ -138,11 +157,11 @@ def process_transaction():
         }, room=str(current_user.id))
         
         # Check alerts
-        alerts = Alert.query.filter_by(user_id=current_user.id, currency=currency).all()
+        alerts = Alert.query.filter_by(user_id=current_user.id, currency=source_currency).all()
         for alert in alerts:
             if amount >= alert.amount_threshold:
                 socketio.emit('alert_triggered', {
-                    'message': f'Alert: Transaction amount {amount} {currency} exceeds threshold {alert.amount_threshold} {alert.currency}',
+                    'message': f'Alert: Transaction amount {amount} {source_currency} exceeds threshold {alert.amount_threshold} {alert.currency}',
                     'transaction_id': new_transaction.id
                 }, room=str(current_user.id))
         

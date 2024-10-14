@@ -27,7 +27,15 @@
     </tr>
     <tr>
         <td>Amount</td>
-        <td>{{ transaction.amount }} {{ transaction.currency }}</td>
+        <td>{{ transaction.amount }} {{ transaction.source_currency }}</td>
+    </tr>
+    <tr>
+        <td>Target Amount</td>
+        <td>{{ transaction.amount * transaction.exchange_rate }} {{ transaction.target_currency }}</td>
+    </tr>
+    <tr>
+        <td>Exchange Rate</td>
+        <td>1 {{ transaction.source_currency }} = {{ transaction.exchange_rate }} {{ transaction.target_currency }}</td>
     </tr>
     <tr>
         <td>Debtor Name</td>
