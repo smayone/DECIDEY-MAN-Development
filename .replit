@@ -39,6 +39,10 @@ args = "Run Test Script"
 task = "workflow.run"
 args = "Create Test User"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Run Realtime Monitoring Test"
+
 [[workflows.workflow]]
 name = "Run Flask App"
 author = "agent"
@@ -60,7 +64,7 @@ agentRequireRestartOnSave = false
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "export FLASK_APP=main.py && flask db migrate -m 'Add Alert model and update Transaction model'"
+args = "export FLASK_APP=main.py && flask db migrate -m 'Add icon_position to User model'"
 
 [[workflows.workflow]]
 name = "Apply Migration"
@@ -116,6 +120,17 @@ agentRequireRestartOnSave = false
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "python create_test_user.py"
+
+[[workflows.workflow]]
+name = "Run Realtime Monitoring Test"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python test_realtime_monitoring.py"
 
 [deployment]
 run = ["sh", "-c", "python main.py"]
