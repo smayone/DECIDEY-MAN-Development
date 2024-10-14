@@ -1,12 +1,12 @@
-from flask import Flask, Response, stream_with_context, request, jsonify, render_template, redirect, url_for
+from flask import Flask, Response, stream_with_context, request, jsonify, render_template, redirect, url_for, flash
 from flask_login import LoginManager, login_required, current_user, login_user, logout_user
-from werkzeug.security import check_password_hash
-from models import db, Transaction, User
-from datetime import datetime, timedelta
-import json
-import time
+from flask_socketio import SocketIO, emit
+from flask_migrate import Migrate
+from werkzeug.security import check_password_hash, generate_password_hash
+from models import db, User, Business, Client, SolvyCard, Transaction, Alert
 import os
 import logging
+from decimal import Decimal
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -17,8 +17,10 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key')
 
 db.init_app(app)
+migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
+socketio = SocketIO(app)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -26,75 +28,130 @@ def load_user(user_id):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
         user = User.query.filter_by(username=username).first()
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
-            logger.info(f"User {username} logged in successfully")
             return redirect(url_for('dashboard'))
-        logger.warning(f"Failed login attempt for user {username}")
+        flash('Invalid username or password')
     return render_template('login.html')
 
 @app.route('/logout')
 @login_required
 def logout():
-    logger.info(f"User {current_user.username} logged out")
     logout_user()
     return redirect(url_for('login'))
 
-@app.route('/stream')
+@app.route('/register_business', methods=['GET', 'POST'])
 @login_required
-def stream():
-    def event_stream():
-        last_id = 0
-        while True:
-            new_transactions = Transaction.query.filter(Transaction.id > last_id).order_by(Transaction.id.asc()).all()
-            if new_transactions:
-                for transaction in new_transactions:
-                    last_id = transaction.id
-                    data = {
-                        'id': transaction.id,
-                        'transaction_hash': transaction.transaction_hash,
-                        'timestamp': transaction.timestamp.isoformat(),
-                        'amount': str(transaction.amount),
-                        'currency': transaction.currency,
-                        'status': transaction.status,
-                        'debtor_name': transaction.debtor_name,
-                        'creditor_name': transaction.creditor_name,
-                        'message_type': transaction.message_type
-                    }
-                    logger.info(f"Sending real-time update for transaction {transaction.id}")
-                    yield f"data: {json.dumps(data)}\n\n"
-            time.sleep(5)  # Check every 5 seconds
+def register_business():
+    if request.method == 'POST':
+        business_name = request.form.get('business_name')
+        business_address = request.form.get('business_address')
+        business_phone = request.form.get('business_phone')
+        business_email = request.form.get('business_email')
 
-    return Response(stream_with_context(event_stream()), content_type='text/event-stream')
+        if not all([business_name, business_address, business_phone, business_email]):
+            flash('All fields are required', 'error')
+            return render_template('register_business.html')
 
-@app.route('/')
+        existing_business = Business.query.filter_by(business_email=business_email).first()
+        if existing_business:
+            flash('A business with this email already exists', 'error')
+            return render_template('register_business.html')
+
+        new_business = Business(
+            owner=current_user,
+            business_name=business_name,
+            business_address=business_address,
+            business_phone=business_phone,
+            business_email=business_email
+        )
+
+        try:
+            db.session.add(new_business)
+            db.session.commit()
+            flash('Business registered successfully', 'success')
+            return redirect(url_for('dashboard'))
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error registering business: {str(e)}")
+            flash('An error occurred while registering the business', 'error')
+
+    return render_template('register_business.html')
+
+@socketio.on('connect')
+def handle_connect():
+    logger.info(f"Client connected: {request.sid}")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    logger.info(f"Client disconnected: {request.sid}")
+
+@socketio.on('set_alert')
+def handle_set_alert(data):
+    user_id = current_user.id
+    amount_threshold = data.get('amount_threshold')
+    currency = data.get('currency')
+    
+    new_alert = Alert(user_id=user_id, amount_threshold=amount_threshold, currency=currency)
+    db.session.add(new_alert)
+    db.session.commit()
+    
+    logger.info(f"Alert set for user {user_id}: {amount_threshold} {currency}")
+    
+    emit('alert_set', {'status': 'success', 'message': 'Alert set successfully'})
+
+def send_transaction_update(transaction):
+    socketio.emit('transaction_update', {
+        'id': transaction.id,
+        'amount': str(transaction.amount),
+        'currency': transaction.currency,
+        'status': transaction.status,
+        'timestamp': transaction.timestamp.isoformat(),
+        'debtor_name': transaction.debtor_name,
+        'creditor_name': transaction.creditor_name
+    })
+
+def check_alerts(transaction):
+    alerts = Alert.query.filter_by(user_id=transaction.user_id, currency=transaction.currency).all()
+    for alert in alerts:
+        if Decimal(transaction.amount) >= Decimal(alert.amount_threshold):
+            socketio.emit('alert_triggered', {
+                'message': f'Alert: Transaction amount {transaction.amount} {transaction.currency} exceeds threshold {alert.amount_threshold} {alert.currency}',
+                'transaction_id': transaction.id
+            }, room=str(transaction.user_id))
+
+@app.route('/api/transaction', methods=['POST'])
+@login_required
+def process_transaction():
+    data = request.json
+    new_transaction = Transaction(
+        user_id=current_user.id,
+        amount=data['amount'],
+        currency=data['currency'],
+        status=data['status'],
+        debtor_name=data['debtor_name'],
+        creditor_name=data['creditor_name'],
+        transaction_type=data['transaction_type']
+    )
+    db.session.add(new_transaction)
+    db.session.commit()
+
+    send_transaction_update(new_transaction)
+    check_alerts(new_transaction)
+
+    return jsonify({'message': 'Transaction processed successfully', 'transaction_id': new_transaction.id}), 201
+
+@app.route('/dashboard')
 @login_required
 def dashboard():
-    transactions = Transaction.query.order_by(Transaction.timestamp.desc()).limit(10).all()
-    logger.info(f"Rendering dashboard for user {current_user.username}")
+    transactions = Transaction.query.filter_by(user_id=current_user.id).order_by(Transaction.timestamp.desc()).limit(10).all()
     return render_template('dashboard.html', transactions=transactions)
 
-@app.route('/api/alerts', methods=['POST'])
-@login_required
-def set_alerts():
-    data = request.json
-    logger.info(f"User {current_user.username} set alert: {data}")
-    # Here you would typically save the alert settings to the database
-    # For simplicity, we'll just return the received data
-    return jsonify(data), 200
-
-@app.route('/transaction/<int:id>')
-@login_required
-def transaction_details(id):
-    transaction = Transaction.query.get_or_404(id)
-    logger.info(f"User {current_user.username} viewed details for transaction {id}")
-    return render_template('transaction_details.html', transaction=transaction)
-
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=True)

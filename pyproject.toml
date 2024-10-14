@@ -16,6 +16,7 @@ psycopg2-binary = "^2.9.9"
 flask-migrate = "^4.0.7"
 requests = "^2.32.3"
 werkzeug = "^3.0.4"
+flask-socketio = "^5.4.1"
 
 
 [build-system]

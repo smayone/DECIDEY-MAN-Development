@@ -3,24 +3,33 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block content %}
-<h2>Transaction Dashboard</h2>
+<h2>Dashboard</h2>
 
-<h3>Real-time Transaction Updates</h3>
+{% if current_user.is_business %}
+    <h3>Your Business</h3>
+    <p>Business Name: {{ current_user.business.business_name }}</p>
+    <p>Business Email: {{ current_user.business.business_email }}</p>
+    <a href="{{ url_for('manage_clients') }}">Manage Clients</a>
+{% else %}
+    <a href="{{ url_for('register_business') }}">Register Your Business</a>
+{% endif %}
+
+<h3>Transaction Dashboard</h3>
+
+<h4>Real-time Transaction Updates</h4>
 <div id="real-time-updates"></div>
 
-<h3>Recent Transactions</h3>
+<h4>Recent Transactions</h4>
 <table id="transactionTable">
     <thead>
         <tr>
             <th>ID</th>
-            <th>Transaction Hash</th>
             <th>Timestamp</th>
             <th>Amount</th>
             <th>Currency</th>
             <th>Status</th>
             <th>Debtor</th>
             <th>Creditor</th>
-            <th>Message Type</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -28,14 +37,12 @@
         {% for transaction in transactions %}
         <tr>
             <td>{{ transaction.id }}</td>
-            <td>{{ transaction.transaction_hash }}</td>
             <td>{{ transaction.timestamp }}</td>
             <td>{{ transaction.amount }}</td>
             <td>{{ transaction.currency }}</td>
             <td>{{ transaction.status }}</td>
             <td>{{ transaction.debtor_name }}</td>
             <td>{{ transaction.creditor_name }}</td>
-            <td>{{ transaction.message_type }}</td>
             <td><a href="{{ url_for('transaction_details', id=transaction.id) }}">View Details</a></td>
         </tr>
         {% endfor %}
@@ -45,66 +52,65 @@
 <h3>Set Alert Thresholds</h3>
 <form id="alertForm">
     <label for="amount_threshold">Amount Threshold:</label>
-    <input type="number" id="amount_threshold" name="amount_threshold" required>
+    <input type="number" id="amount_threshold" name="amount_threshold" step="0.01" required>
     <label for="currency">Currency:</label>
     <input type="text" id="currency" name="currency" required>
     <button type="submit">Set Alert</button>
 </form>
 
+<div id="alertMessages"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
 <script>
-    const evtSource = new EventSource("{{ url_for('stream') }}");
+    const socket = io();
     const updates = document.getElementById('real-time-updates');
+    const transactionTable = document.getElementById('transactionTable').getElementsByTagName('tbody')[0];
     const alertForm = document.getElementById('alertForm');
-    let alertThreshold = 0;
-    let alertCurrency = '';
+    const alertMessages = document.getElementById('alertMessages');
 
-    evtSource.onmessage = function(event) {
-        const data = JSON.parse(event.data);
-        const newRow = document.createElement('div');
-        newRow.innerHTML = `New transaction: ID ${data.id}, Hash: ${data.transaction_hash}, Amount: ${data.amount} ${data.currency}, Status: ${data.status}, Debtor: ${data.debtor_name}, Creditor: ${data.creditor_name}, Type: ${data.message_type}`;
-        updates.prepend(newRow);
+    socket.on('connect', () => {
+        console.log('Connected to server');
+    });
 
-        // Check if the transaction amount exceeds the alert threshold
-        if (parseFloat(data.amount) > alertThreshold && data.currency === alertCurrency) {
-            alert(`Alert: New transaction exceeds threshold! Amount: ${data.amount} ${data.currency}`);
-        }
+    socket.on('transaction_update', (data) => {
+        const newUpdate = document.createElement('div');
+        newUpdate.textContent = `New transaction: ${data.amount} ${data.currency} - ${data.status}`;
+        updates.prepend(newUpdate);
 
-        // Add the new transaction to the table
-        const table = document.getElementById('transactionTable').getElementsByTagName('tbody')[0];
-        const row = table.insertRow(0);
-        row.innerHTML = `
+        const newRow = transactionTable.insertRow(0);
+        newRow.innerHTML = `
             <td>${data.id}</td>
-            <td>${data.transaction_hash}</td>
             <td>${data.timestamp}</td>
             <td>${data.amount}</td>
             <td>${data.currency}</td>
             <td>${data.status}</td>
             <td>${data.debtor_name}</td>
             <td>${data.creditor_name}</td>
-            <td>${data.message_type}</td>
             <td><a href="/transaction/${data.id}">View Details</a></td>
         `;
+    });
+
+    socket.on('alert_triggered', (data) => {
+        const alertMessage = document.createElement('div');
+        alertMessage.textContent = data.message;
+        alertMessage.style.color = 'red';
+        alertMessages.prepend(alertMessage);
+    });
+
+    alertForm.onsubmit = (e) => {
+        e.preventDefault();
+        const amountThreshold = document.getElementById('amount_threshold').value;
+        const currency = document.getElementById('currency').value;
+
+        socket.emit('set_alert', { amount_threshold: amountThreshold, currency: currency });
     };
 
-    alertForm.onsubmit = function(e) {
-        e.preventDefault();
-        alertThreshold = parseFloat(document.getElementById('amount_threshold').value);
-        alertCurrency = document.getElementById('currency').value;
-        
-        fetch("{{ url_for('set_alerts') }}", {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({amount_threshold: alertThreshold, currency: alertCurrency}),
-        })
-        .then(response => response.json())
-        .then(data => {
-            alert(`Alert set for transactions over ${alertThreshold} ${alertCurrency}`);
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-        });
-    };
+    socket.on('alert_set', (data) => {
+        if (data.status === 'success') {
+            alert('Alert set successfully');
+        } else {
+            alert('Error setting alert');
+        }
+    });
 </script>
 {% endblock %}
