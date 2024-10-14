@@ -5,15 +5,6 @@
 {% block content %}
 <h2>Dashboard</h2>
 
-{% if current_user.is_business %}
-    <h3>Your Business</h3>
-    <p>Business Name: {{ current_user.business.business_name }}</p>
-    <p>Business Email: {{ current_user.business.business_email }}</p>
-    <a href="{{ url_for('manage_clients') }}">Manage Clients</a>
-{% else %}
-    <a href="{{ url_for('register_business') }}">Register Your Business</a>
-{% endif %}
-
 <h3>Transaction Dashboard</h3>
 
 <h4>Real-time Transaction Updates</h4>
@@ -102,15 +93,25 @@
         const amountThreshold = document.getElementById('amount_threshold').value;
         const currency = document.getElementById('currency').value;
 
-        socket.emit('set_alert', { amount_threshold: amountThreshold, currency: currency });
-    };
-
-    socket.on('alert_set', (data) => {
-        if (data.status === 'success') {
-            alert('Alert set successfully');
-        } else {
+        fetch('/api/set_alert', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ amount_threshold: amountThreshold, currency: currency }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                alert('Alert set successfully');
+            } else {
+                alert('Error setting alert');
+            }
+        })
+        .catch((error) => {
+            console.error('Error:', error);
             alert('Error setting alert');
-        }
-    });
+        });
+    };
 </script>
 {% endblock %}
