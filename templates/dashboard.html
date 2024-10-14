@@ -18,6 +18,9 @@
             <th>Amount</th>
             <th>Currency</th>
             <th>Status</th>
+            <th>Debtor</th>
+            <th>Creditor</th>
+            <th>Message Type</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -30,6 +33,9 @@
             <td>{{ transaction.amount }}</td>
             <td>{{ transaction.currency }}</td>
             <td>{{ transaction.status }}</td>
+            <td>{{ transaction.debtor_name }}</td>
+            <td>{{ transaction.creditor_name }}</td>
+            <td>{{ transaction.message_type }}</td>
             <td><a href="{{ url_for('transaction_details', id=transaction.id) }}">View Details</a></td>
         </tr>
         {% endfor %}
@@ -55,7 +61,7 @@
     evtSource.onmessage = function(event) {
         const data = JSON.parse(event.data);
         const newRow = document.createElement('div');
-        newRow.innerHTML = `New transaction: ID ${data.id}, Hash: ${data.transaction_hash}, Amount: ${data.amount} ${data.currency}, Status: ${data.status}`;
+        newRow.innerHTML = `New transaction: ID ${data.id}, Hash: ${data.transaction_hash}, Amount: ${data.amount} ${data.currency}, Status: ${data.status}, Debtor: ${data.debtor_name}, Creditor: ${data.creditor_name}, Type: ${data.message_type}`;
         updates.prepend(newRow);
 
         // Check if the transaction amount exceeds the alert threshold
@@ -73,6 +79,9 @@
             <td>${data.amount}</td>
             <td>${data.currency}</td>
             <td>${data.status}</td>
+            <td>${data.debtor_name}</td>
+            <td>${data.creditor_name}</td>
+            <td>${data.message_type}</td>
             <td><a href="/transaction/${data.id}">View Details</a></td>
         `;
     };

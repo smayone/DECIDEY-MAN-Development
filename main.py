@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key')  # Replace with a real secret key
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key')
 
 db.init_app(app)
 login_manager = LoginManager(app)
@@ -50,7 +50,6 @@ def stream():
     def event_stream():
         last_id = 0
         while True:
-            # Check for new transactions
             new_transactions = Transaction.query.filter(Transaction.id > last_id).order_by(Transaction.id.asc()).all()
             if new_transactions:
                 for transaction in new_transactions:
@@ -61,7 +60,10 @@ def stream():
                         'timestamp': transaction.timestamp.isoformat(),
                         'amount': str(transaction.amount),
                         'currency': transaction.currency,
-                        'status': transaction.status
+                        'status': transaction.status,
+                        'debtor_name': transaction.debtor_name,
+                        'creditor_name': transaction.creditor_name,
+                        'message_type': transaction.message_type
                     }
                     logger.info(f"Sending real-time update for transaction {transaction.id}")
                     yield f"data: {json.dumps(data)}\n\n"
