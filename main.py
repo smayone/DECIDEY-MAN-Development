@@ -41,11 +41,13 @@ def logout():
 @login_required
 def stream():
     def event_stream():
+        last_id = 0
         while True:
             # Check for new transactions
-            new_transactions = Transaction.query.filter(Transaction.timestamp > (datetime.utcnow() - timedelta(seconds=10))).all()
+            new_transactions = Transaction.query.filter(Transaction.id > last_id).order_by(Transaction.id.asc()).all()
             if new_transactions:
                 for transaction in new_transactions:
+                    last_id = transaction.id
                     data = {
                         'id': transaction.id,
                         'transaction_hash': transaction.transaction_hash,
