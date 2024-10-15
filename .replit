@@ -47,6 +47,10 @@ args = "Run Realtime Monitoring Test"
 task = "workflow.run"
 args = "Check GitHub Repo"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Check GitHub Token"
+
 [[workflows.workflow]]
 name = "Run Flask App"
 author = "agent"
@@ -146,6 +150,17 @@ agentRequireRestartOnSave = false
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "curl -H 'Authorization: token $GITHUB_TOKEN' https://api.github.com/repos/smayone/DECIDEY-MAN-Development"
+
+[[workflows.workflow]]
+name = "Check GitHub Token"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "curl -H 'Authorization: token $GITHUB_TOKEN' https://api.github.com/user"
 
 [deployment]
 run = ["sh", "-c", "python main.py"]
