@@ -145,7 +145,7 @@ agentRequireRestartOnSave = false
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "curl -H 'Authorization: token $GITHUB_TOKEN' https://api.github.com/repos/smayone/TransactBridge"
+args = "curl -H 'Authorization: token $GITHUB_TOKEN' https://api.github.com/repos/smayone/DECIDEY-MAN-Development"
 
 [deployment]
 run = ["sh", "-c", "python main.py"]
